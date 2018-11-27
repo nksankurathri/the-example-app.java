@@ -1,52 +1,39 @@
+# Javascript Node CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-javascript/ for more details
+#
 version: 2
 jobs:
-   build:
-     docker:
-       - image: circleci/openjdk:8-node-browsers
-     steps:
+  build:
+    docker:
+      # specify the version you desire here
+      - image: circleci/node:7.10
+      
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/mongo:3.4.4
+
+    working_directory: ~/repo
+
+    steps:
       - checkout
-      - run:
-          name: The Example App Java - Building and Testing
-          command: ./gradlew clean test
-      - run:
-          name: The Example App Java - Run Server
-          command: ./gradlew run
-          background: true
-      - run:
-          name: Wait for Started Server to warm up
-          command: sleep 5
-      - run:
-          name: Checkout E2E Tests
-          command: git clone https://github.com/contentful/the-example-app-e2e-tests.git ./test/e2e
+
+      # Download and cache dependencies
       - restore_cache:
           keys:
-          - tea-e2e-tests-{{ checksum "./test/e2e/package.json" }}
-          - tea-e2e-tests-
-      - run:
-          name: Install E2E dependencies
-          command: sudo apt-get update; sudo apt-get install xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2
-      - run:
-          name: Install E2E Tests
-          command: cd ./test/e2e && npm install
+          - v1-dependencies-{{ checksum "package.json" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      - run: yarn install
+
       - save_cache:
-          key: tea-e2e-tests-{{ checksum "./test/e2e/package.json" }}
           paths:
-            - ./test/e2e/node_modules
-      - run:
-          name: Make Cypress different configuration aware
-          command: mv cypress-circleci.json cypress.json
-      - run:
-          name: The Example App Java - E2E
-          command: ./test/e2e/node_modules/.bin/cypress run
-      - run:
-          name: Save test results
-          command: |
-            mkdir -p ./junit/
-            find . -type f -regex ".*/build/test-results/.*xml" -exec cp {} ./junit/ \;
-          when: always
-      - store_test_results:
-          path: ./junit
-      - store_artifacts:
-          path: ./junit
-      - store_artifacts:
-          path: ./cypress
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+        
+      # run tests!
+      - run: yarn test
+
+
